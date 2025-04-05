@@ -30,17 +30,10 @@ for line in lines:
             st.error(f"❌ Error processing file {line.strip()}: {e}")
             continue    
 
-        # Add your file processing logic here
-        # For example, you can read the file and display its content or perform any other operation
-        # df = pd.read_excel(line.strip())
-        # st.write(df.head())`
-
 if st.button("Process File", key=line.strip()):
     # Copy Files to Target
     logging.info(f"File {line.strip()} processed successfully.")
     st.success(f"✅ File {line.strip()} processed successfully.")
-
-
 
 # a method that generates a list of source, and target files, keeps track of the size and md5 of the copied files
 def generate_file_list(source_files, target_folder):

@@ -30,6 +30,17 @@ def get_files(path, extension, pattern):
 df1 = pd.read_excel(file1, sheet_name=sheetname)
 df2 = pd.read_excel(file2, sheet_name=sheetname)
 
+# Add a method to plot several curtes in a single plot
+def plot_multiple_curves(title, x_values, y_values_list, colors, ui_col):
+    fig = go.Figure()
+    for i, y_values in enumerate(y_values_list):
+        fig.add_trace(go.Scatter(x=x_values, y=y_values, mode='lines+markers', name=title[i], line=dict(color=colors[i])))
+    fig.update_layout(title=title, xaxis_title='Maturity', yaxis_title='bp', showlegend=True)
+    ui_col.plotly_chart(fig)
+
+def calculate_difference(list1, list2):
+    return [a - b for a, b in zip(list1, list2)]    
+
 # Plot a curve chart given a title, list of x values, and list of y values
 def plot_curve_chart(title, x_values, y_values, color, ui_col):
     fig = go.Figure()
@@ -76,17 +87,22 @@ st.table(sorted_corr_matrix)
 j = 0
 for col in sorted_corr_matrix.index: # df1.columns[2:]:
     compare_category = sorted_corr_matrix.iloc[j, 1]
-    col1.subheader(col)
+    col1.subheader(f"{col} Curves")
     col1.markdown(f"**Comparison:** `{compare_category}`")
     try:
-        plot_curve_chart(col,maturities,df1[col].values.tolist(), 'blue', col1)
+        # example of how to use the plot_multiple_curves method
+        curves = [df1[col].values.tolist(), df2[col].values.tolist()]
+        plot_multiple_curves(col, maturities, curves, ['blue', 'red'], col1)
+
+        # plot_curve_chart(col,maturities,df1[col].values.tolist(), 'blue', col1)
     except:
         col1.error(f"Error plotting {col} from {file1}. Please check the data.")
 
-    col2.subheader(col)
+    col2.subheader(f"{col} Differences")
     col2.markdown(f"**Comparison:** `{compare_category}`")
     try:
-        plot_curve_chart(col,maturities,df2[col].values.tolist(), 'red', col2)
+        diff_list = calculate_difference(df1[col].values.tolist(), df2[col].values.tolist())
+        plot_curve_chart(col,maturities,diff_list, 'red', col2)
     except:
         col2.error(f"Error plotting {col} from {file2}. Please check the data.")
 
@@ -94,3 +110,4 @@ for col in sorted_corr_matrix.index: # df1.columns[2:]:
 
 
 # st.table(df1)
+# calculate the difference between 2 lists
