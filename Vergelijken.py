@@ -7,10 +7,7 @@ import re
 
 st.set_page_config(page_title="Vergelijken", page_icon="📈", layout="wide")
 
- 
- 
- 
- st.title("Vergelijken")
+st.title("Vergelijken")
 
 # Give a title an icon and make streamlit app wide by default
 file1 = st.text_input("Enter the first file name (e.g., file1.csv):", "C:\\Repos\\Data\\Curves\\Book_2.xlsx")
