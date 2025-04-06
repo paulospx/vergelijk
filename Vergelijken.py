@@ -7,15 +7,16 @@ import re
 
 st.set_page_config(page_title="Vergelijken", page_icon="📈", layout="wide")
 
-# Title of the Streamlit app
-st.title("Vergelijken")
+ 
+ 
+ 
+ st.title("Vergelijken")
 
 # Give a title an icon and make streamlit app wide by default
-
 file1 = st.text_input("Enter the first file name (e.g., file1.csv):", "C:\\Repos\\Data\\Curves\\Book_2.xlsx")
 file2 = st.text_input("Enter the second file name (e.g., file2.csv):", "C:\\Repos\\Data\\Curves\\Book_3.xlsx")
 sheetname = st.selectbox("Select the sheet name:", ["AZ ZC YC", "Sheet1", "Sheet2"])
-
+# 
 
 # Given a path it scans for all the files with and extension and a regex pattern
 def get_files(path, extension, pattern):
@@ -25,8 +26,7 @@ def get_files(path, extension, pattern):
             files.append(os.path.join(path, file))
     return files
 
-
-# Read the file to 
+# Read the files and store them in a dataframe
 df1 = pd.read_excel(file1, sheet_name=sheetname)
 df2 = pd.read_excel(file2, sheet_name=sheetname)
 
@@ -42,11 +42,21 @@ def calculate_difference(list1, list2):
     return [a - b for a, b in zip(list1, list2)]    
 
 # Plot a curve chart given a title, list of x values, and list of y values
-def plot_curve_chart(title, x_values, y_values, color, ui_col):
+def plot_curve_chart(title, x_values, y_values, color, ui_col, prefix='202501'):
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=x_values, y=y_values, mode='lines+markers', name=title, line=dict(color=color)))
     fig.update_layout(title=title, xaxis_title='Maturity', yaxis_title='bp', showlegend=True)
     ui_col.plotly_chart(fig)
+    
+    # requires kaleido to be installed to export the image
+    # pip install -U kaleido
+    
+    try:
+        # Create the directory if it doesn't exist
+        os.makedirs(f"./img/{prefix}", exist_ok=True)
+        fig.write_image(f"./img/{prefix}/{title}.png")
+    except Exception as e:
+        print(f"Error writing image: {e}")
 
 # method to plot a heatmap given a title, list of x values, and list of y values
 def plot_heatmap(title, x_values, y_values, color, ui_col):
@@ -67,7 +77,8 @@ def plot_correlation_heatmap(df1, df2, title, color, ui_col):
 
 sorted_corr_matrix = plot_correlation_heatmap(df1.iloc[:, 2:],df2.iloc[:, 2:], 'Correlation Matrix', 'YlGnBu', st)
 
-col1, col2 = st.columns(2) 
+
+
 
 # select the first column values
 maturities = df1.iloc[:, 0].values.tolist()
@@ -83,6 +94,7 @@ sorted_corr_matrix = pd.DataFrame(sorted_corr_matrix)
 sorted_corr_matrix['Category'] = pd.cut(sorted_corr_matrix[0], bins=[-1.0, -0.75, -0.50, -0.25, 0.5, 0.75, 0.90, 1], labels=['Stronh Negative','Moderate Negative','Weak Negative','Neutral/Unrelated','Weak Positive', 'Moderate Positive', 'Strong Positive'])
 st.table(sorted_corr_matrix)
 
+col1, col2 = st.columns(2)
 
 j = 0
 for col in sorted_corr_matrix.index: # df1.columns[2:]:
@@ -92,9 +104,7 @@ for col in sorted_corr_matrix.index: # df1.columns[2:]:
     try:
         # example of how to use the plot_multiple_curves method
         curves = [df1[col].values.tolist(), df2[col].values.tolist()]
-        plot_multiple_curves(col, maturities, curves, ['blue', 'red'], col1)
-
-        # plot_curve_chart(col,maturities,df1[col].values.tolist(), 'blue', col1)
+        plot_multiple_curves(col, maturities, curves, ['#D83A34','#61C7D4'], col1)
     except:
         col1.error(f"Error plotting {col} from {file1}. Please check the data.")
 
@@ -102,12 +112,7 @@ for col in sorted_corr_matrix.index: # df1.columns[2:]:
     col2.markdown(f"**Comparison:** `{compare_category}`")
     try:
         diff_list = calculate_difference(df1[col].values.tolist(), df2[col].values.tolist())
-        plot_curve_chart(col,maturities,diff_list, 'red', col2)
+        plot_curve_chart(col,maturities,diff_list, '#6B66B3', col2)
     except:
         col2.error(f"Error plotting {col} from {file2}. Please check the data.")
-
     j += 1
-
-
-# st.table(df1)
-# calculate the difference between 2 lists

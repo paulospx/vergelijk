@@ -7,33 +7,13 @@ import shutil
 logging.basicConfig(filename='log/dagelijks.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-st.title("Dagelijks")
-
-files = st.text_area("Enter the list of files to copy (e.g., file1.csv):", "C:\\Repos\\Data\\Curves\\Book_3.xlsx\nC:\\Repos\\Data\\Curves\\Book_2.xlsx")
-lines = files.split("\n")
-
-for line in lines:
-    if line.strip():  # Check if the line is not empty
-        logging.info(f"Processing file: {line.strip()}")
-
-        # If file exists write to log info and display checked otherwise write to log error and display error message
-        try:
-            with open(line.strip(), 'r') as f:
-                logging.info(f"File {line.strip()} exists.")
-                st.info(f"✅ File {line.strip()} exists.")
-        except FileNotFoundError:
-            logging.error(f"File {line.strip()} does not exist.")
-            st.error(f"❌ File {line.strip()} does not exist.")
-            continue
-        except Exception as e:
-            logging.error(f"Error processing file {line.strip()}: {e}")
-            st.error(f"❌ Error processing file {line.strip()}: {e}")
-            continue    
-
-if st.button("Process File", key=line.strip()):
-    # Copy Files to Target
-    logging.info(f"File {line.strip()} processed successfully.")
-    st.success(f"✅ File {line.strip()} processed successfully.")
+# a method to unzip a file
+def unzip_file(zip_file, target_folder):
+    import zipfile
+    with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+        zip_ref.extractall(target_folder)
+    logging.info(f"Unzipped {zip_file} to {target_folder}")
+    st.success(f"✅ Unzipped {zip_file} to {target_folder}")
 
 # a method that generates a list of source, and target files, keeps track of the size and md5 of the copied files
 def generate_file_list(source_files, target_folder):
@@ -95,6 +75,42 @@ def copy_files_from_plan(plan_file, target_folder):
         file_info["size"] = os.path.getsize(target)
         file_info["md5"] = calculate_md5(target)
         logging.info(f"Copied {source} to {target}, size: {file_info['size']}, md5: {file_info['md5']}")
+
+
+monthly_period = st.selectbox("Select the period:", ["202501", "202502", "202503", "202504", "202505", "202506", "202507", "202508", "202509", "202510", "202511", "202512"])
+quarterly_period = st.selectbox("Select the quarterly period:", ["2025Q01", "2025Q02", "2025Q03", "2025Q04"])
+
+st.title("Dagelijks")
+
+files = st.text_area("Enter the list of files to copy (e.g., file1.csv):", "C:\\Repos\\Data\\Curves\\Book_3.xlsx\nC:\\Repos\\Data\\Curves\\Book_2.xlsx")
+lines = files.split("\n")
+
+for line in lines:
+    if line.strip():  # Check if the line is not empty
+        logging.info(f"Processing file: {line.strip()}")
+
+        # If file exists write to log info and display checked otherwise write to log error and display error message
+        try:
+            with open(line.strip(), 'r') as f:
+                logging.info(f"File {line.strip()} exists.")
+                st.info(f"✅ File {line.strip()} exists.")
+        except FileNotFoundError:
+            logging.error(f"File {line.strip()} does not exist.")
+            st.error(f"❌ File {line.strip()} does not exist.")
+            continue
+        except Exception as e:
+            logging.error(f"Error processing file {line.strip()}: {e}")
+            st.error(f"❌ Error processing file {line.strip()}: {e}")
+            continue    
+
+if st.button("Process File", key=line.strip()):
+    # Copy Files to Target
+    logging.info(f"File {line.strip()} processed successfully.")
+    st.success(f"✅ File {line.strip()} processed successfully.")
+
+
+
+    
 
 
 if st.button("Export File List"):
