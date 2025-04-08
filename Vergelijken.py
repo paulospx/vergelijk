@@ -28,12 +28,20 @@ df1 = pd.read_excel(file1, sheet_name=sheetname)
 df2 = pd.read_excel(file2, sheet_name=sheetname)
 
 # Add a method to plot several curtes in a single plot
-def plot_multiple_curves(title, x_values, y_values_list, colors, ui_col):
+def plot_multiple_curves(title, x_values, y_values_list, colors, ui_col, prefix='202501'):
+
     fig = go.Figure()
     for i, y_values in enumerate(y_values_list):
         fig.add_trace(go.Scatter(x=x_values, y=y_values, mode='lines+markers', name=title[i], line=dict(color=colors[i])))
     fig.update_layout(title=title, xaxis_title='Maturity', yaxis_title='bp', showlegend=True)
     ui_col.plotly_chart(fig)
+
+    try:
+        # Create the directory if it doesn't exist
+        os.makedirs(f"./img/{prefix}", exist_ok=True)
+        fig.write_image(f"./img/{prefix}/diff-{title}.png")
+    except Exception as e:
+        print(f"Error writing image: {e}")
 
 def calculate_difference(list1, list2):
     return [a - b for a, b in zip(list1, list2)]    
@@ -51,7 +59,7 @@ def plot_curve_chart(title, x_values, y_values, color, ui_col, prefix='202501'):
     try:
         # Create the directory if it doesn't exist
         os.makedirs(f"./img/{prefix}", exist_ok=True)
-        fig.write_image(f"./img/{prefix}/{title}.png")
+        fig.write_image(f"./img/{prefix}/diff-{title}.png")
     except Exception as e:
         print(f"Error writing image: {e}")
 
@@ -87,15 +95,33 @@ maturities = df1.iloc[:, 0].values.tolist()
 # df1 = df1.iloc[3:100, :].fillna(np.nan)
 
 # add an extra column to sorted correlation matrix with categorization base on the correlation value
-sorted_corr_matrix = pd.DataFrame(sorted_corr_matrix)
-sorted_corr_matrix['Category'] = pd.cut(sorted_corr_matrix[0], bins=[-1.0, -0.75, -0.50, -0.25, 0.5, 0.75, 0.90, 1], labels=['Stronh Negative','Moderate Negative','Weak Negative','Neutral/Unrelated','Weak Positive', 'Moderate Positive', 'Strong Positive'])
-st.table(sorted_corr_matrix)
+correlation_df = pd.DataFrame({
+    'Curve': sorted_corr_matrix.index,
+    'Correlation': sorted_corr_matrix.values
+}).set_index('Curve')
+
+correlation_df['Category'] = pd.cut(correlation_df['Correlation'], bins=[-1.0, -0.75, -0.50, -0.25, 0.5, 0.75, 0.90, 1], labels=['Strong Negative','Moderate Negative','Weak Negative','Neutral/Unrelated','Weak Positive', 'Moderate Positive', 'Strong Positive'])
+
+# sumarize the number of curves in each category in a dataframe
+summary_df = correlation_df.groupby('Category').size().reset_index(name='Count')
+st.table(summary_df)
+
+# select a list of categories from the correlation_df dataframe excluding nan values  
+category = st.selectbox("Select a category:", correlation_df['Category'].unique().dropna().tolist())
+
+# Display the new DataFrame
+# st.table(correlation_df) 
+
+# select curves from the selected category
+selected_curves = correlation_df[correlation_df['Category'] == category].index.tolist()
+
+sorted_corr_matrix.to_json('./data/202501/sorted_corr_matrix.json', orient='records')
 
 col1, col2 = st.columns(2)
 
 j = 0
-for col in sorted_corr_matrix.index: # df1.columns[2:]:
-    compare_category = sorted_corr_matrix.iloc[j, 1]
+for col in selected_curves: # correlation_df.index: 
+    compare_category = correlation_df.iloc[j, 1]
     col1.subheader(f"{col} Curves")
     col1.markdown(f"**Comparison:** `{compare_category}`")
     try:
