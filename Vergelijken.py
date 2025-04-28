@@ -1,9 +1,7 @@
 import streamlit as st
-import plotly.graph_objects as go
 import numpy as np
 import pandas as pd
-import os
-import re
+from utils import show_delta_console, plot_correlation_heatmap, plot_curve_chart, calculate_difference, plot_multiple_curves
 
 st.set_page_config(page_title="Vergelijken", page_icon="📈", layout="wide")
 
@@ -12,78 +10,29 @@ st.title("Vergelijken")
 # Give a title an icon and make streamlit app wide by default
 file1 = st.text_input("Enter the first file name (e.g., file1.csv):", "C:\\Repos\\Data\\Curves\\Book_2.xlsx")
 file2 = st.text_input("Enter the second file name (e.g., file2.csv):", "C:\\Repos\\Data\\Curves\\Book_3.xlsx")
-sheetname = st.selectbox("Select the sheet name:", ["AZ ZC YC", "Sheet1", "Sheet2"])
-# 
-
-# Given a path it scans for all the files with and extension and a regex pattern
-def get_files(path, extension, pattern):
-    files = []
-    for file in os.listdir(path):
-        if file.endswith(extension) and re.match(pattern, file):
-            files.append(os.path.join(path, file))
-    return files
+sheetname = st.selectbox("Select the sheet name:", ["AC ZC YC", "Sheet1", "Sheet2"])
 
 # Read the files and store them in a dataframe
 df1 = pd.read_excel(file1, sheet_name=sheetname)
 df2 = pd.read_excel(file2, sheet_name=sheetname)
 
-# Add a method to plot several curtes in a single plot
-def plot_multiple_curves(title, x_values, y_values_list, colors, ui_col, prefix='202501'):
+show_delta_console(df1, df2,file1, file2, sheetname)
 
-    fig = go.Figure()
-    for i, y_values in enumerate(y_values_list):
-        fig.add_trace(go.Scatter(x=x_values, y=y_values, mode='lines+markers', name=title[i], line=dict(color=colors[i])))
-    fig.update_layout(title=title, xaxis_title='Maturity', yaxis_title='bp', showlegend=True)
-    ui_col.plotly_chart(fig)
+# Name the first column as Maturity and the second column as Currency
+df1.columns = ['Maturity', 'Currency'] + df1.columns[2:].tolist()
+# df2.columns = ['Maturity', 'Currency'] + df1.columns[2:].tolist()
 
-    try:
-        # Create the directory if it doesn't exist
-        os.makedirs(f"./img/{prefix}", exist_ok=True)
-        fig.write_image(f"./img/{prefix}/diff-{title}.png")
-    except Exception as e:
-        print(f"Error writing image: {e}")
+# Show df1 table with 5 decimal points and 2 decimal points for the first two columns
+df1 = df1.round(6)
 
-def calculate_difference(list1, list2):
-    return [a - b for a, b in zip(list1, list2)]    
+st.table(df1)
 
-# Plot a curve chart given a title, list of x values, and list of y values
-def plot_curve_chart(title, x_values, y_values, color, ui_col, prefix='202501'):
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=x_values, y=y_values, mode='lines+markers', name=title, line=dict(color=color)))
-    fig.update_layout(title=title, xaxis_title='Maturity', yaxis_title='bp', showlegend=True)
-    ui_col.plotly_chart(fig)
-    
-    # requires kaleido to be installed to export the image
-    # pip install -U kaleido
-    
-    try:
-        # Create the directory if it doesn't exist
-        os.makedirs(f"./img/{prefix}", exist_ok=True)
-        fig.write_image(f"./img/{prefix}/diff-{title}.png")
-    except Exception as e:
-        print(f"Error writing image: {e}")
 
-# method to plot a heatmap given a title, list of x values, and list of y values
-def plot_heatmap(title, x_values, y_values, color, ui_col):
-    fig = go.Figure(data=go.Heatmap(z=y_values, x=x_values, y=x_values, colorscale=color))
-    fig.update_layout(title=title, xaxis_title='Curves', yaxis_title='Curves')
-    ui_col.plotly_chart(fig)
-
-# Give me a method that given a 2 dataframe, calculartes a correlation matrix and plot it as a heatmap
-def plot_correlation_heatmap(df1, df2, title, color, ui_col):
-    correlation_matrix = df1.corrwith(df2)
-    # sort the correlation matrix by the second column
-    sorted_correlation_matrix = correlation_matrix.sort_values(ascending=True)
-
-    fig = go.Figure(data=go.Heatmap(z=sorted_correlation_matrix.values.reshape(1, -1), x=df1.columns, y=['Correlation'], colorscale=color))
-    fig.update_layout(title=title, xaxis_title='Curves', yaxis_title='Correlation')
-    ui_col.plotly_chart(fig)
-    return sorted_correlation_matrix
+# # join the two dataframes on by 2 columns
+# df3 = df1.join(df2.set_index(['Maturity', 'Currency']), on=['Maturity', 'Currency'], rsuffix='_target')
+# df3.to_csv('c:/temp/df3.csv', index=False)
 
 sorted_corr_matrix = plot_correlation_heatmap(df1.iloc[:, 2:],df2.iloc[:, 2:], 'Correlation Matrix', 'YlGnBu', st)
-
-
-
 
 # select the first column values
 maturities = df1.iloc[:, 0].values.tolist()
@@ -103,7 +52,7 @@ correlation_df = pd.DataFrame({
 correlation_df['Category'] = pd.cut(correlation_df['Correlation'], bins=[-1.0, -0.75, -0.50, -0.25, 0.5, 0.75, 0.90, 1], labels=['Strong Negative','Moderate Negative','Weak Negative','Neutral/Unrelated','Weak Positive', 'Moderate Positive', 'Strong Positive'])
 
 # sumarize the number of curves in each category in a dataframe
-summary_df = correlation_df.groupby('Category').size().reset_index(name='Count')
+summary_df = correlation_df.groupby('Category', observed=True).size().reset_index(name='Count')
 st.table(summary_df)
 
 # select a list of categories from the correlation_df dataframe excluding nan values  
@@ -125,7 +74,6 @@ for col in selected_curves: # correlation_df.index:
     col1.subheader(f"{col} Curves")
     col1.markdown(f"**Comparison:** `{compare_category}`")
     try:
-        # example of how to use the plot_multiple_curves method
         curves = [df1[col].values.tolist(), df2[col].values.tolist()]
         plot_multiple_curves(col, maturities, curves, ['#D83A34','#61C7D4'], col1)
     except:
@@ -139,3 +87,4 @@ for col in selected_curves: # correlation_df.index:
     except:
         col2.error(f"Error plotting {col} from {file2}. Please check the data.")
     j += 1
+
