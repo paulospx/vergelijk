@@ -1,7 +1,7 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-from utils import show_delta_console, plot_correlation_heatmap, plot_curve_chart, calculate_difference, plot_multiple_curves
+from utils import show_delta_console, plot_correlation_heatmap, plot_curve_chart, calculate_difference, plot_multiple_curves, calculate_differences
 
 st.set_page_config(page_title="Vergelijken", page_icon="📈", layout="wide")
 
@@ -18,6 +18,16 @@ df2 = pd.read_excel(file2, sheet_name=sheetname)
 
 show_delta_console(df1, df2,file1, file2, sheetname)
 
+
+delta = calculate_differences(df1, df2)
+# Color streamlit table column is_equal based on the value green if equal and red if not equal
+delta['is_equal'] = delta['is_equal'].apply(lambda x: 'Equal' if x == 0 else 'Different')
+delta['is_equal'] = delta['is_equal'].apply(lambda x: 'Equal' if x == 'Equal' else 'Different')
+
+
+
+st.table(delta)
+
 # Name the first column as Maturity and the second column as Currency
 df1.columns = ['Maturity', 'Currency'] + df1.columns[2:].tolist()
 # df2.columns = ['Maturity', 'Currency'] + df1.columns[2:].tolist()
@@ -25,7 +35,9 @@ df1.columns = ['Maturity', 'Currency'] + df1.columns[2:].tolist()
 # Show df1 table with 5 decimal points and 2 decimal points for the first two columns
 df1 = df1.round(6)
 
-st.table(df1)
+
+
+# st.table(df1)
 
 
 # # join the two dataframes on by 2 columns
@@ -52,14 +64,11 @@ correlation_df = pd.DataFrame({
 correlation_df['Category'] = pd.cut(correlation_df['Correlation'], bins=[-1.0, -0.75, -0.50, -0.25, 0.5, 0.75, 0.90, 1], labels=['Strong Negative','Moderate Negative','Weak Negative','Neutral/Unrelated','Weak Positive', 'Moderate Positive', 'Strong Positive'])
 
 # sumarize the number of curves in each category in a dataframe
-summary_df = correlation_df.groupby('Category', observed=True).size().reset_index(name='Count')
-st.table(summary_df)
+# summary_df = correlation_df.groupby('Category', observed=True).size().reset_index(name='Count')
+# st.table(summary_df)
 
 # select a list of categories from the correlation_df dataframe excluding nan values  
 category = st.selectbox("Select a category:", correlation_df['Category'].unique().dropna().tolist())
-
-# Display the new DataFrame
-# st.table(correlation_df) 
 
 # select curves from the selected category
 selected_curves = correlation_df[correlation_df['Category'] == category].index.tolist()
