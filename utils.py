@@ -2,6 +2,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import os
 import re
+import fnmatch
 
 def calculate_differences(df1, df2):
     # New DataFrame to store differences
@@ -36,7 +37,7 @@ def show_delta_console(df1,df2, file1, file2, sheetname):
     print(delta.to_string(index=False))
     print()
     print("---")
-
+    
 
 # Given a path it scans for all the files with and extension and a regex pattern
 def get_files(path, extension, pattern):
@@ -100,3 +101,34 @@ def plot_correlation_heatmap(df1, df2, title, color, ui_col):
     return sorted_correlation_matrix
 
 
+def append_matching_lines(directory, pattern, search_text, output_file):
+    """
+    Search for files matching a pattern in a directory, find lines containing specific text,
+    and append those lines to an output file.
+
+    Parameters:
+        directory (str): Path to the directory to search in.
+        pattern (str): Pattern to match file names (e.g., '*.txt').
+        search_text (str): Text to search for within files.
+        output_file (str): Path to the file where results will be appended.
+
+    Returns:
+        None
+    """
+    try:
+        with open(output_file, 'a') as outfile:
+            for root, _, files in os.walk(directory):
+                for file in fnmatch.filter(files, pattern):
+                    file_path = os.path.join(root, file)
+                    try:
+                        with open(file_path, 'r') as infile:
+                            for line in infile:
+                                if search_text in line:
+                                    outfile.write(line)
+                    except (OSError, UnicodeDecodeError) as e:
+                        print(f"Error reading file {file_path}: {e}")
+    except OSError as e:
+        print(f"Error opening output file {output_file}: {e}")
+
+# Example Usage
+# append_matching_lines('path/to/directory', '*.txt', 'search_text', 'output.txt')
