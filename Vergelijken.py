@@ -1,6 +1,9 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.stats import ttest_rel, wilcoxon, ks_2samp
+from sklearn.decomposition import PCA
 from utils import show_delta_console, plot_correlation_heatmap, plot_curve_chart, calculate_difference, plot_multiple_curves, calculate_differences
 
 st.set_page_config(page_title="Vergelijken", page_icon="📈", layout="wide")
@@ -35,7 +38,96 @@ df1.columns = ['Maturity', 'Currency'] + df1.columns[2:].tolist()
 # Show df1 table with 5 decimal points and 2 decimal points for the first two columns
 df1 = df1.round(6)
 
+def mean_absolute_error(actual, predicted):
+    """
+    Calculate the Mean Absolute Error (MAE) between two arrays.
 
+    Parameters:
+    actual (array-like): True values.
+    predicted (array-like): Predicted values.
+
+    Returns:
+    float: The MAE value.
+    """
+    actual = np.array(actual)
+    predicted = np.array(predicted)
+    return np.mean(np.abs(actual - predicted))
+
+def mean_squared_error(actual, predicted):
+    """
+    Calculate the Mean Squared Error (MSE) between two arrays.
+
+    Parameters:
+    actual (array-like): True values.
+    predicted (array-like): Predicted values.
+
+    Returns:
+    float: The MSE value.
+    """
+    actual = np.array(actual)
+    predicted = np.array(predicted)
+    return np.mean((actual - predicted) ** 2)
+
+
+def show_statistical_differences(df1, df2):
+    # Calculate differences between curves
+    differences = df1 - df2
+
+    # Visual inspection
+    plt.figure(figsize=(12, 6))
+    for col in df1.columns:
+        plt.plot(df1.index, df1[col], label=f"DF1 {col}", linestyle="--")
+        plt.plot(df2.index, df2[col], label=f"DF2 {col}", linestyle="-")
+    plt.xlabel("Maturities")
+    plt.ylabel("Values")
+    plt.title("Comparison of Financial Curves")
+    plt.legend()
+    plt.grid()
+    plt.show()
+    
+    #show plotly chart in streamlit
+    # st.plotly_chart(plt)
+
+    # Descriptive statistics
+    print("Descriptive Statistics for Differences:")
+    print(differences.describe())
+
+    # Statistical tests
+    for col in differences.columns:
+        print(f"\nStatistical Analysis for {col}:")
+        t_stat, t_p = ttest_rel(df1[col], df2[col])
+        print(f"Paired t-test: t-stat={t_stat:.3f}, p-value={t_p:.3f}")
+
+        try:
+            w_stat, w_p = wilcoxon(df1[col], df2[col])
+            print(f"Wilcoxon test: W-stat={w_stat:.3f}, p-value={w_p:.3f}")
+        except ValueError as e:
+            print("Wilcoxon test not applicable:", e)
+
+        ks_stat, ks_p = ks_2samp(df1[col], df2[col])
+        print(f"Kolmogorov-Smirnov test: KS-stat={ks_stat:.3f}, p-value={ks_p:.3f}")
+
+        mae = mean_absolute_error(df1[col], df2[col])
+        rmse = np.sqrt(mean_squared_error(df1[col], df2[col]))
+        print(f"MAE={mae:.3f}, RMSE={rmse:.3f}")
+
+    # Principal Component Analysis
+    combined_data = pd.concat([df1, df2], axis=1).dropna()
+    pca = PCA(n_components=2)
+    pca_result = pca.fit_transform(combined_data)
+
+    plt.figure(figsize=(8, 6))
+    plt.scatter(pca_result[:, 0], pca_result[:, 1], c=["blue", "green"] * (len(pca_result) // 2), alpha=0.7)
+    plt.xlabel("Principal Component 1")
+    plt.ylabel("Principal Component 2")
+    plt.title("PCA of Financial Curves")
+    plt.grid()
+    plt.show()
+
+    # Plot the PCA result in streamlit
+    st.pyplot(plt)
+
+show_statistical_differences(df1.iloc[:, 2:], df2.iloc[:, 2:])
 
 # st.table(df1)
 

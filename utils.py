@@ -24,6 +24,10 @@ def calculate_differences(df1, df2):
 # Print description for delta
 def show_delta_console(df1,df2, file1, file2, sheetname):
     delta = calculate_differences(df1, df2)
+
+    # Create buckets that calculate buckets of 10% for the percentage difference for cum_abs_diff column
+    # delta['bucket'] = pd.cut(delta['cum_abs_diff'], bins=[-float('inf'), -10, 0, 10, float('inf')], labels=['< -10%', '0%', '> 0%', '> 10%'])
+
     print("# Diferences between the columns present in both files")
     print()
     print("The following table shows the differences between the columns present in both files:")
@@ -37,6 +41,7 @@ def show_delta_console(df1,df2, file1, file2, sheetname):
     print(delta.to_string(index=False))
     print()
     print("---")
+
     
 
 # Given a path it scans for all the files with and extension and a regex pattern
